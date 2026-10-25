@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ne">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Siena Beauty Parlour - Smart Skin Analyzer</title>
+    <style>
+        body { font-family: 'Kalimati', Arial, sans-serif; text-align: center; background-color: #fce4ec; margin: 0; padding: 20px; }
+        h1 { color: #d81b60; margin-bottom: 5px; font-size: 26px; }
+        h3 { color: #880e4f; margin-top: 0; font-size: 18px; margin-bottom: 20px;}
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 380px; margin: 0 auto; border-top: 5px solid #d81b60; }
+        .btn-group { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
+        .row-btn-group { display: flex; gap: 10px; margin-top: 15px; }
+        button { color: white; padding: 14px; font-size: 18px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; transition: 0.3s; }
+        .primary-btn { background-color: #d81b60; }
+        .secondary-btn { background-color: #00796b; }
+        .action-btn { background-color: #2e7d32; font-size: 20px; }
+        .info-btn { background-color: #1565c0; flex: 1; font-size: 16px; }
+        .warning-btn { background-color: #f57c00; margin-top: 15px; }
+        #video-container, #preview-container { margin: 15px auto; border: 4px solid #d81b60; border-radius: 10px; overflow: hidden; display: none; position: relative; }
+        video, img#captured-image { width: 100%; display: block; }
+        .mirror { transform: scaleX(-1); }
+        
+        /* Questionnaire Styles */
+        .question-box { text-align: left; margin-top: 20px; display: none; background: #fff8fa; padding: 15px; border-radius: 8px; border: 1px dashed #d81b60; }
+        .question { font-weight: bold; color: #333; margin-bottom: 10px; font-size: 16px; }
+        .options select { width: 100%; padding: 12px; font-size: 15px; border: 1px solid #ddd; border-radius: 8px; background-color: white; margin-bottom: 15px; outline: none; }
+        
+        .result-title { font-size: 22px; font-weight: bold; color: #333; margin: 15px 0; }
+        #dynamic-details { margin-top: 15px; font-size: 15px; color: #333; line-height: 1.5; background: #f9f9f9; padding: 15px; border-radius: 8px; display: none; border-left: 5px solid #d81b60; text-align: left; overflow-wrap: break-word; }
+        .label { color: #d81b60; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>Siena Beauty parlor and Cosmetics</h1>
+    <h3>Smart Skin Analyzer</h3>
+    
+    <div class="card" id="main-ui">
+        <!-- Step 1: Camera Options -->
+        <div id="step-1-form">
+            <div class="btn-group">
+                <button class="primary-btn" onclick="showCameraOptions()">क्यामेराबाट स्क्यान गर्नुहोस्</button>
+                <button class="secondary-btn" onclick="document.getElementById('image-upload').click()">ग्यालरीबाट फोटो छान्नुहोस्</button>
+                <input type="file" id="image-upload" accept="image/*" style="display: none;" onchange="handleUpload(event)">
+            </div>
+        </div>
+
+        <div id="camera-choice-ui" style="display: none;">
+            <div class="btn-group">
+                <button class="primary-btn" onclick="startCamera('environment')">पछाडिको क्यामेरा (Back)</button>
+                <button class="primary-btn" onclick="startCamera('user')">अगाडिको क्यामेरा (Front)</button>
+                <button class="warning-btn" onclick="resetApp()">रद्द गर्नुहोस्</button>
+            </div>
+        </div>
+
+        <div id="video-container"><video id="webcam-video" autoplay playsinline></video></div>
+        <button id="capture-btn" class="action-btn" style="display: none; margin-top: 15px;" onclick="capturePhoto()">फोटो खिच्नुहोस्</button>
+
+        <div id="preview-container"><img id="captured-image" src="" alt="Preview"></div>
+        
+        <!-- Step 2: Quick Questions (Replaces API) -->
+        <div id="question-ui" class="question-box">
+            <h4 style="color: #d81b60; margin-top: 0; text-align: center;">तपाईंको छालाको अवस्था</h4>
+            
+            <div class="question">१. बिहान उठ्दा तपाईंको अनुहार कस्तो हुन्छ?</div>
+            <div class="options">
+                <select id="q1">
+                    <option value="oily">पूरै अनुहार चिल्लो हुन्छ</option>
+                    <option value="dry">सुक्खा र तन्किएको महसुस हुन्छ</option>
+                    <option value="normal">सामान्य रहन्छ</option>
+                </select>
+            </div>
+
+            <div class="question">२. अनुहार धोएको १-२ घण्टापछि कस्तो हुन्छ?</div>
+            <div class="options">
+                <select id="q2">
+                    <option value="oily">चाँडै चिल्लो आउन थाल्छ</option>
+                    <option value="dry">फुस्रो र सुक्खा देखिन्छ</option>
+                    <option value="normal">खासै फरक पर्दैन, सामान्य नै हुन्छ</option>
+                </select>
+            </div>
+
+            <div class="question">३. अनुहारमा मुख्य समस्या के छ?</div>
+            <div class="options">
+                <select id="q3">
+                    <option value="acne">डन्डीफोर र त्यसका दागहरू</option>
+                    <option value="melasma">चाया (Pigmentation) वा पोतो</option>
+                    <option value="none">खासै समस्या छैन</option>
+                </select>
+            </div>
+
+            <button class="action-btn" onclick="calculateSkinType()" style="margin-top: 10px;">नतिजा हेर्नुहोस् (Analyze)</button>
+        </div>
+
+        <!-- Step 3: Results -->
+        <div id="result-ui" style="display: none;">
+            <div id="result-title" class="result-title"></div>
+            <div class="row-btn-group" id="success-btns">
+                <button class="info-btn" onclick="showDetail('cause')">कारण हेर्नुहोस्</button>
+                <button class="info-btn" style="background-color: #00838f;" onclick="showDetail('recommendation')">सिफारिस हेर्नुहोस्</button>
+            </div>
+            <div id="dynamic-details"></div>
+            <button class="warning-btn" onclick="resetApp()">फेरि स्क्यान गर्नुहोस्</button>
+        </div>
+    </div>
+
+    <script>
+        let videoStream = null; let currentAiData = null;
+
+        function showCameraOptions() { document.getElementById('step-1-form').style.display = 'none'; document.getElementById('camera-choice-ui').style.display = 'block'; }
+        async function startCamera(facingMode) {
+            document.getElementById('camera-choice-ui').style.display = 'none';
+            const video = document.getElementById('webcam-video');
+            if (facingMode === 'user') video.classList.add('mirror'); else video.classList.remove('mirror');
+            try {
+                videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facingMode, width: { ideal: 720 } } });
+                video.srcObject = videoStream; document.getElementById('video-container').style.display = 'block'; document.getElementById('capture-btn').style.display = 'block';
+            } catch (err) { alert("क्यामेरा खोल्न सकिएन। अनुमति दिनुहोस्।"); resetApp(); }
+        }
+        function capturePhoto() {
+            const video = document.getElementById('webcam-video'); const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth; canvas.height = video.videoHeight; const ctx = canvas.getContext('2d');
+            if(video.classList.contains('mirror')) { ctx.translate(canvas.width, 0); ctx.scale(-1, 1); }
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            document.getElementById('captured-image').src = canvas.toDataURL('image/jpeg', 0.5); 
+            stopCamera();
+            document.getElementById('video-container').style.display = 'none'; document.getElementById('capture-btn').style.display = 'none'; 
+            showPreviewAndQuestions();
+        }
+        function handleUpload(event) {
+            const file = event.target.files[0]; if(!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) { document.getElementById('captured-image').src = e.target.result; document.getElementById('step-1-form').style.display = 'none'; showPreviewAndQuestions(); }
+            reader.readAsDataURL(file);
+        }
+        function showPreviewAndQuestions() { 
+            document.getElementById('preview-container').style.display = 'block'; 
+            document.getElementById('question-ui').style.display = 'block'; 
+        }
+        function stopCamera() { if (videoStream) { videoStream.getTracks().forEach(track => track.stop()); videoStream = null; } }
+
+        // The logic engine that replaces the API
+        function calculateSkinType() {
+            document.getElementById('preview-container').style.display = 'none'; 
+            document.getElementById('question-ui').style.display = 'none';
+
+            const q1 = document.getElementById('q1').value;
+            const q2 = document.getElementById('q2').value;
+            const q3 = document.getElementById('q3').value;
+
+            let finalType = "";
+            let causeStr = "";
+            let recStr = "";
+
+            // Condition Logic
+            if (q3 === "acne") {
+                finalType = "Acne-Prone Skin (डन्डीफोर आउने छाला)";
+                causeStr = "छालाको प्वाल (Pores) बन्द हुनु, बढी चिल्लो उत्पादन हुनु, वा हर्मोनको गडबडीले गर्दा डन्डीफोर आउँछ।";
+                recStr = "सिएना पार्लरमा 'Anti-Acne Facial' लिनुहोस्। घरमा Salicylic Acid भएको फेसवास र Oil-free मोइस्चराइजर प्रयोग गर्नुहोस्।";
+            } else if (q3 === "melasma") {
+                finalType = "Melasma / Pigmented Skin (चाया र दाग भएको छाला)";
+                causeStr = "घामको कडा किरण (UV rays), हर्मोनको परिवर्तन, वा उमेरको कारणले छालामा मेलानिन बढेर चाया आउँछ।";
+                recStr = "सिएना पार्लरमा 'Pigmentation Control Facial' वा ब्लिच ट्रिटमेन्ट उपयुक्त हुन्छ। दिनभरि अनिवार्य रूपमा राम्रो Sunscreen (SPF 50) र राति Vitamin C सिरम लगाउनुहोस्।";
+            } else if (q1 === "oily" || q2 === "oily") {
+                finalType = "Oily Skin (चिल्लो छाला)";
+                causeStr = "छालामा रहेको सेबेशियस ग्रन्थीले (Sebaceous glands) आवश्यकताभन्दा बढी तेल उत्पादन गर्दा छाला चिल्लो हुन्छ।";
+                recStr = "सिएना पार्लरमा 'Oil-Control / Deep Cleansing Facial' लिनुहोस्। सधैं Gel-based (हल्का) मोइस्चराइजर र क्लिन्जर प्रयोग गर्नुहोस्।";
+            } else if (q1 === "dry" || q2 === "dry") {
+                finalType = "Dry Skin (सुक्खा छाला)";
+                causeStr = "छालाले आवश्यक मात्रामा नमी (Moisture) र प्राकृतिक तेल उत्पादन गर्न नसक्दा छाला सुक्खा र फुस्रो हुन्छ।";
+                recStr = "सिएना पार्लरमा 'Hydrating Facial' (नमी बढाउने) उपयुक्त हुन्छ। घरमा Hyaluronic acid भएको बाक्लो मोइस्चराइजर र क्रिम बेस फेसवास प्रयोग गर्नुहोस्। प्रशस्त पानी पिउनुहोस्।";
+            } else {
+                finalType = "Normal Skin (सामान्य छाला)";
+                causeStr = "तपाईंको छालामा तेल र पानीको मात्रा एकदम सन्तुलित छ। यो एकदम स्वस्थ छाला हो।";
+                recStr = "सिएना पार्लरमा महिनाको एकपटक 'Fruit Facial' वा 'Glow Facial' गरेर चमक कायम राख्न सक्नुहुन्छ। बाहिर निस्कँदा Sunscreen लगाउन नबिर्सनुहोस्।";
+            }
+
+            currentAiData = { skin_type: finalType, cause: causeStr, recommendation: recStr };
+            
+            document.getElementById('result-ui').style.display = 'block';
+            document.getElementById('result-title').innerHTML = `नतिजा: <span style="color:#d81b60;">${finalType}</span>`;
+        }
+
+        function showDetail(type) {
+            const detailsBox = document.getElementById("dynamic-details"); 
+            if(type === 'cause') detailsBox.innerHTML = `<span class='label'>मुख्य कारण:</span><br><br>${currentAiData.cause}`;
+            else if(type === 'recommendation') detailsBox.innerHTML = `<span class='label'>सिएना पार्लरको सिफारिस:</span><br><br>${currentAiData.recommendation}`;
+            detailsBox.style.display = "block";
+        }
+
+        function resetApp() {
+            stopCamera(); currentAiData = null;
+            document.querySelectorAll('#camera-choice-ui, #video-container, #capture-btn, #preview-container, #question-ui, #result-ui, #dynamic-details').forEach(el => el.style.display = 'none');
+            document.getElementById('q1').value = "oily"; document.getElementById('q2').value = "oily"; document.getElementById('q3').value = "acne";
+            document.getElementById('step-1-form').style.display = 'block'; document.getElementById('image-upload').value = ""; 
+        }
+    </script>
+</body>
+</html>
